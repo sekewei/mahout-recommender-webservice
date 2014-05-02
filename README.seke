@@ -1,0 +1,99 @@
+mahout 0.5 taste_web網站服務建置法
+----------------------------------
+
+前言:
+
+ 因為mahout新版不再提供taste_web網站服務建置範例,
+ ssaroha特將mahout 0.5版的taste_web範例置於如下github網站,方便參考:
+  https://github.com/ssaroha/mahout-recommender-webservice
+
+ 其目錄結構如下:
+  ./mahout-recommender-service/
+    .git/
+    README		# 安裝說明
+    create_service.sh	# 建立新推薦網站服務指令
+	mvn archetype:generate \
+	    -DarchetypeGroupId=org.apache.maven.archetypes \
+	    -DarchetypeArtifactId=maven-archetype-webapp \
+	    -DgroupId=com.mykidscart.mahout_service \
+	    -DartifactId=mahout_service \
+	    -Dpackage=com.mykidscart.mahout_service \
+	    -Dversion=1.0.0 \
+	    -DjarName=mahout_service \
+	    -Dsource=1.6 \
+    mahout_service/
+      pom.xml
+      src/main/webapp/WEB-INF/web.xml	# web-app/servlet/init-parm/parm-value決定推薦器
+      src/main/java/com/mykidscart/mahout_service/RecommenderServlet.java
+      src/main/resources/movies.dat	# 3952 movies
+      src/main/resources/ratings.dat	# 1M movie ratings of 6K users
+      target/mahout_service.war
+
+  預設推薦器為org.apache.mahout.cf.taste.example.grouplens.GroupLensRecommender
+
+以下為復原taste_web範例步驟:
+
+ # 建立git用戶身份,可作可不作
+ # git config --global user.name "yyy zzz"
+ # git config --global user.email "xxxx@gmail.com"
+ # git config --global credential.helper cache
+ # git config --global credential.helper "cache --timeout=3600"
+
+ # 在當前目錄復原 ./mahout-recommender-service/ 架構
+ git clone https://github.com/ssaroha/mahout-recommender-webservice.git
+
+ # 產生 target/mahout_service.war
+ cd ./mahout-recommender-service/
+ mvn package
+
+ ### 添加資料檔供讀取
+ cp src/main/resources/movies.dat target/classes/org/apache/mahout/cf/taste/example/grouplens/
+ cp src/main/resources/ratings.dat target/classes/org/apache/mahout/cf/taste/example/grouplens/
+ mvn package
+
+ ######## 測試法1: jetty ##############
+ # 導入jetty插件,提供.war執行功能
+ vi pom.xml
+   <project>
+     <build>  
+       <plugins>
+         <plugin>
+           <groupId>org.mortbay.jetty</groupId>
+           <artifactId>jetty-maven-plugin</artifactId>
+           <version>7.1.2.v20100523</version>
+           <configuration>
+             <webApp>${project.build.directory}/${project.artifactId}.war</webApp>
+           </configuration>
+         </plugin>
+       </plugins>
+     </build>
+   </project>
+
+ # 用jetty啟動.war推薦服務
+ mvn -Djetty.port=7070 jetty:run-war
+
+ # 用瀏覽器測試推薦服務
+ lynx http://localhost:7070/RecommenderServlet?userID=111&howMany=400
+
+ ######## 測試法2: tomcat ##############
+ # 部署 mahout_service.war 到 tomcat 網站
+ # cp ./target/mahout_service.war  apache-tomcat-7.0.28/webapps/
+ # unzip  -d mahout_service ./mahout_service.war
+ 
+ cp ./target/mahout_service.war /usr/share/tomcat6/webapps/
+ # unzip  -d mahout_service ./mahout_service.war
+
+ # 用瀏覽器測試推薦服務
+ lynx http://localhost:8080/mahout_service/RecommenderServlet?userID=111&howMany=400
+	5.5	3233
+	5.3458047	557
+	5.0	134
+	5.0	1434
+	4.93471	3245
+	4.899492	2503
+	4.816771	2198
+	4.815301	3888
+	4.788968	53
+	4.77251	787
+	4.75434	3338
+	.....
